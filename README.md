@@ -10,7 +10,7 @@ Add it in your settings.gradle.kts at the end of repositories:
 Step 2. Add the dependency
 
 	dependencies {
-	        implementation("com.github.abbott2012:NetworkMonitorLib:Tag")
+	        implementation 'com.github.abbott2012:NetworkMonitorLib:v1.0.0'
 	}
  Step 3. 在 Activity 中一行开启
 在页面的 onStart() 或 onResume() ：
