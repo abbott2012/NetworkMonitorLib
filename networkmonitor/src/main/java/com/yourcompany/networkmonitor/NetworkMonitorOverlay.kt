@@ -1,8 +1,10 @@
 package com.lff.networkmonitor
 
 import android.app.Activity
+import android.app.Application
 import android.content.Intent
 import android.graphics.Color
+import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
@@ -20,6 +22,8 @@ object NetworkMonitorOverlay {
     private var container: LinearLayout? = null
     private var messageView: TextView? = null
     private var actionView: TextView? = null
+    private var globalCallbacks: Application.ActivityLifecycleCallbacks? = null
+    private var currentActivity: Activity? = null
 
     /**
      * Start monitoring network state and show overlay in the given activity.
@@ -27,6 +31,119 @@ object NetworkMonitorOverlay {
     @JvmStatic
     fun start(activity: Activity) {
         if (monitor != null && container != null) {
+            return
+        }
+
+        createOverlay(activity)
+
+        monitor = NetworkMonitor(activity.applicationContext).also { networkMonitor ->
+            networkMonitor.start(object : NetworkMonitor.Listener {
+                override fun onNetworkStateChanged(state: NetworkState) {
+                    activity.runOnUiThread {
+                        updateOverlayWithState(activity, state)
+                    }
+                }
+            })
+        }
+    }
+
+    /**
+     * Stop monitoring and hide overlay.
+     */
+    @JvmStatic
+    fun stop() {
+        monitor?.stop()
+        monitor = null
+        currentActivity = null
+
+        actionView?.setOnClickListener(null)
+        container?.visibility = View.GONE
+
+        container = null
+        messageView = null
+        actionView = null
+    }
+
+    @JvmStatic
+    fun startGlobal(application: Application) {
+        if (globalCallbacks != null || monitor != null) {
+            return
+        }
+
+        monitor = NetworkMonitor(application.applicationContext).also { networkMonitor ->
+            networkMonitor.start(object : NetworkMonitor.Listener {
+                override fun onNetworkStateChanged(state: NetworkState) {
+                    val activity = currentActivity ?: return
+                    activity.runOnUiThread {
+                        updateOverlayWithState(activity, state)
+                    }
+                }
+            })
+        }
+
+        val callbacks = object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+            }
+
+            override fun onActivityStarted(activity: Activity) {
+            }
+
+            override fun onActivityResumed(activity: Activity) {
+                currentActivity = activity
+                createOverlay(activity)
+            }
+
+            override fun onActivityPaused(activity: Activity) {
+                if (activity == currentActivity) {
+                    currentActivity = null
+                }
+            }
+
+            override fun onActivityStopped(activity: Activity) {
+            }
+
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
+            }
+
+            override fun onActivityDestroyed(activity: Activity) {
+                if (activity == currentActivity) {
+                    currentActivity = null
+                }
+                if (activity == container?.context) {
+                    actionView?.setOnClickListener(null)
+                    container = null
+                    messageView = null
+                    actionView = null
+                }
+            }
+        }
+
+        application.registerActivityLifecycleCallbacks(callbacks)
+        globalCallbacks = callbacks
+    }
+
+    @JvmStatic
+    fun stopGlobal(application: Application) {
+        val callbacks = globalCallbacks
+        if (callbacks != null) {
+            application.unregisterActivityLifecycleCallbacks(callbacks)
+            globalCallbacks = null
+        }
+
+        monitor?.stop()
+        monitor = null
+        currentActivity = null
+
+        actionView?.setOnClickListener(null)
+        container?.visibility = View.GONE
+
+        container = null
+        messageView = null
+        actionView = null
+    }
+
+    private fun createOverlay(activity: Activity) {
+        if (container != null && container?.context === activity) {
             return
         }
 
@@ -68,32 +185,6 @@ object NetworkMonitorOverlay {
         container = overlayContainer
         messageView = overlayMessageView
         actionView = overlayActionView
-
-        monitor = NetworkMonitor(context).also { networkMonitor ->
-            networkMonitor.start(object : NetworkMonitor.Listener {
-                override fun onNetworkStateChanged(state: NetworkState) {
-                    activity.runOnUiThread {
-                        updateOverlayWithState(activity, state)
-                    }
-                }
-            })
-        }
-    }
-
-    /**
-     * Stop monitoring and hide overlay.
-     */
-    @JvmStatic
-    fun stop() {
-        monitor?.stop()
-        monitor = null
-
-        actionView?.setOnClickListener(null)
-        container?.visibility = View.GONE
-
-        container = null
-        messageView = null
-        actionView = null
     }
 
     private fun updateOverlayWithState(activity: Activity, state: NetworkState) {
