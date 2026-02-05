@@ -5,8 +5,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.wifi.WifiManager
 import android.provider.Settings
-import android.telephony.TelephonyManager
 
 class NetworkMonitor(
     context: Context,
@@ -130,10 +130,17 @@ class NetworkMonitor(
     }
 
     private fun getWifiSignalLevel(): Int {
-        val tm =
-            appContext.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+        val wifiManager =
+            appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
                 ?: return -1
-        val type = tm.dataNetworkType
-        return if (type == TelephonyManager.NETWORK_TYPE_UNKNOWN) -1 else 2
+
+        return try {
+            val info = wifiManager.connectionInfo ?: return -1
+            WifiManager.calculateSignalLevel(info.rssi, 3)
+        } catch (_: SecurityException) {
+            -1
+        } catch (_: Exception) {
+            -1
+        }
     }
 }
