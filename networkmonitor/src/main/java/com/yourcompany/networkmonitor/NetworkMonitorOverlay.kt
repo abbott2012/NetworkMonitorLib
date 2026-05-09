@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
@@ -158,6 +159,10 @@ object NetworkMonitorOverlay {
         )
         overlayContainer.setBackgroundColor(Color.parseColor("#B3000000"))
         overlayContainer.visibility = View.GONE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            overlayContainer.elevation = OVERLAY_ELEVATION
+            overlayContainer.translationZ = OVERLAY_ELEVATION
+        }
 
         val overlayMessageView = TextView(context)
         overlayMessageView.setTextColor(Color.WHITE)
@@ -181,6 +186,7 @@ object NetworkMonitorOverlay {
         layoutParams.marginEnd = dpToPx(activity, 16f)
 
         activity.addContentView(overlayContainer, layoutParams)
+        bringOverlayToFront(overlayContainer)
 
         container = overlayContainer
         messageView = overlayMessageView
@@ -200,7 +206,7 @@ object NetworkMonitorOverlay {
             }
 
             NetworkState.NoNetwork -> {
-                overlayContainer.visibility = View.VISIBLE
+                showOverlay(overlayContainer)
                 overlayMessageView.text = "当前无可用网络连接"
                 overlayActionView.visibility = View.VISIBLE
                 overlayActionView.text = "去网络设置"
@@ -213,7 +219,7 @@ object NetworkMonitorOverlay {
             }
 
             NetworkState.AirplaneMode -> {
-                overlayContainer.visibility = View.VISIBLE
+                showOverlay(overlayContainer)
                 overlayMessageView.text = "当前为飞行模式，网络已关闭"
                 overlayActionView.visibility = View.VISIBLE
                 overlayActionView.text = "去系统设置"
@@ -226,7 +232,7 @@ object NetworkMonitorOverlay {
             }
 
             NetworkState.CaptivePortal -> {
-                overlayContainer.visibility = View.VISIBLE
+                showOverlay(overlayContainer)
                 overlayMessageView.text = "当前网络需要网页登录或认证"
                 overlayActionView.visibility = View.VISIBLE
                 overlayActionView.text = "打开网络设置"
@@ -239,7 +245,7 @@ object NetworkMonitorOverlay {
             }
 
             is NetworkState.WifiWarning -> {
-                overlayContainer.visibility = View.VISIBLE
+                showOverlay(overlayContainer)
                 overlayMessageView.text = "Wi‑Fi 信号较弱"
                 overlayActionView.visibility = View.VISIBLE
                 overlayActionView.text = "检查Wi‑Fi"
@@ -252,7 +258,7 @@ object NetworkMonitorOverlay {
             }
 
             NetworkState.Cellular -> {
-                overlayContainer.visibility = View.VISIBLE
+                showOverlay(overlayContainer)
                 overlayMessageView.text = "当前使用移动网络，可能产生流量费用"
                 overlayActionView.visibility = View.VISIBLE
                 overlayActionView.text = "切换到Wi‑Fi"
@@ -266,8 +272,21 @@ object NetworkMonitorOverlay {
         }
     }
 
+    private fun showOverlay(overlayContainer: LinearLayout) {
+        overlayContainer.visibility = View.VISIBLE
+        bringOverlayToFront(overlayContainer)
+    }
+
+    private fun bringOverlayToFront(overlayContainer: LinearLayout) {
+        overlayContainer.bringToFront()
+        overlayContainer.parent?.requestLayout()
+        overlayContainer.invalidate()
+    }
+
     private fun dpToPx(activity: Activity, dp: Float): Int {
         val density = activity.resources.displayMetrics.density
         return (dp * density + 0.5f).toInt()
     }
+
+    private const val OVERLAY_ELEVATION = 10000f
 }

@@ -5,7 +5,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.net.wifi.WifiManager
 import android.provider.Settings
 
 class NetworkMonitor(
@@ -93,7 +92,6 @@ class NetworkMonitor(
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         val isCaptivePortal =
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)
-        val isWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
         val isCellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
 
         if (!hasInternet || !hasValidated) {
@@ -102,13 +100,6 @@ class NetworkMonitor(
 
         if (config.checkCaptivePortal && isCaptivePortal) {
             return NetworkState.CaptivePortal
-        }
-
-        if (isWifi && config.checkWifiSignal) {
-            val level = getWifiSignalLevel()
-            if (level in 0..1) {
-                return NetworkState.WifiWarning(level)
-            }
         }
 
         if (isCellular && config.checkCellularWarning) {
@@ -129,18 +120,4 @@ class NetworkMonitor(
         }
     }
 
-    private fun getWifiSignalLevel(): Int {
-        val wifiManager =
-            appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-                ?: return -1
-
-        return try {
-            val info = wifiManager.connectionInfo ?: return -1
-            WifiManager.calculateSignalLevel(info.rssi, 3)
-        } catch (_: SecurityException) {
-            -1
-        } catch (_: Exception) {
-            -1
-        }
-    }
 }

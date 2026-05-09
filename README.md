@@ -1,8 +1,38 @@
-### 全局模式用法（跨 Activity 右上角提示）
+# NetworkMonitorLib
 
-全局模式会在 **整个 App 所有页面** 的右上角显示网络状态提示条（无网络、飞行模式、Wi‑Fi 信号弱、使用移动网络等），不需要在每个 Activity 手动调用。
+在项目中引用 v2.2.0。
 
-#### 1. 在 Application 中初始化
+## 1. 添加 JitPack 仓库
+
+在 `settings.gradle.kts` 或根 `build.gradle` 中确保有 JitPack 仓库：
+
+```kotlin
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+## 2. 添加依赖
+
+在 app 模块 `build.gradle.kts` 中添加：
+
+```kotlin
+dependencies {
+    implementation("com.github.abbott2012:NetworkMonitorLib:2.2.0")
+}
+```
+
+然后 Sync Project 并编译。第一次可能稍微久一点，因为 JitPack 会远程构建。
+
+## 3. 全局模式用法
+
+全局模式会在整个 App 所有页面的最上层显示网络状态提示条，不需要在每个 Activity 手动调用。
+
+### 在 Application 中初始化
 
 ```kotlin
 import android.app.Application
@@ -12,7 +42,6 @@ class MyApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Start global network monitor overlay
         NetworkMonitorOverlay.startGlobal(this)
     }
 }
@@ -28,9 +57,21 @@ class MyApp : Application() {
 </application>
 ```
 
-#### 2. 不需要在每个 Activity 手动调用
+### 可选：在运行时关闭全局提示
 
-使用全局模式后，无需再在 Activity 里写：
+```kotlin
+NetworkMonitorOverlay.stopGlobal(application)
+```
+
+需要重新开启时再次调用：
+
+```kotlin
+NetworkMonitorOverlay.startGlobal(application)
+```
+
+## 4. 单 Activity 用法
+
+如果不需要全局模式，也可以在单个页面中手动开启：
 
 ```kotlin
 override fun onStart() {
@@ -42,20 +83,4 @@ override fun onStop() {
     super.onStop()
     NetworkMonitorOverlay.stop()
 }
-```
-
-只要 App 在前台，当前页面右上角会自动根据网络状态显示或隐藏提示条。
-
-#### 3. 可选：在运行时关闭全局提示
-
-如果需要在某些场景下临时关闭全局提示（例如退出登录或某些特殊模式），可以调用：
-
-```kotlin
-NetworkMonitorOverlay.stopGlobal(application)
-```
-
-需要重新开启时再次调用：
-
-```kotlin
-NetworkMonitorOverlay.startGlobal(application)
 ```
